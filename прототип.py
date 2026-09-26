@@ -1,6 +1,6 @@
 #ввод данных
 print ("Введите день недели")
-day = str(input())
+day = (input()).lower()
 
 
 with open("schedule.txt", "r", encoding="utf-8") as file:
