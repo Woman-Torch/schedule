@@ -1,17 +1,23 @@
 import datetime
 import tkinter as tk
+from tkinter import font
 
 
 # ==========================================
 # НАСТРОЙКИ
 # ==========================================
 
-# Дата начала первой НЕЧЁТНОЙ недели
 START_DATE = datetime.date(2026, 9, 1)
 
 SCHEDULE_FILE = "schedule.txt"
 TIME_FILE = "time.txt"
 GIRL_FILE = "girl.txt"
+
+# Цвета терминала
+BG = "#000000"
+GREEN = "#00ff41"
+DARK_GREEN = "#003b16"
+BRIGHT_GREEN = "#39ff14"
 
 
 # ==========================================
@@ -30,31 +36,7 @@ days = [
 
 
 # ==========================================
-# ТЕКУЩАЯ ДАТА И ВРЕМЯ
-# ==========================================
-
-now = datetime.datetime.now()
-
-today = now.date()
-current_time = now.time()
-
-day = days[today.weekday()]
-
-
-# ==========================================
-# ОПРЕДЕЛЯЕМ ЧЁТНОСТЬ НЕДЕЛИ
-# ==========================================
-
-weeks_passed = (today - START_DATE).days // 7
-
-if weeks_passed % 2 == 0:
-    week = "НЕЧЁТНАЯ НЕДЕЛЯ"
-else:
-    week = "ЧЁТНАЯ НЕДЕЛЯ"
-
-
-# ==========================================
-# ЗАГРУЖАЕМ ASCII-ART
+# ASCII-ART
 # ==========================================
 
 with open(GIRL_FILE, "r", encoding="utf-8") as file:
@@ -62,7 +44,7 @@ with open(GIRL_FILE, "r", encoding="utf-8") as file:
 
 
 # ==========================================
-# ЗАГРУЖАЕМ ВРЕМЯ ПАР
+# ВРЕМЯ ПАР
 # ==========================================
 
 pair_times = {}
@@ -85,92 +67,109 @@ with open(TIME_FILE, "r", encoding="utf-8") as file:
 
 
 # ==========================================
-# ЗАГРУЖАЕМ РАСПИСАНИЕ
+# ПОЛУЧЕНИЕ РАСПИСАНИЯ
 # ==========================================
 
-with open(SCHEDULE_FILE, "r", encoding="utf-8") as file:
-    lines = file.readlines()
+def get_schedule():
 
+    today = datetime.date.today()
 
-show_week = False
-show_day = False
+    day = days[today.weekday()]
 
-schedule = []
+    weeks_passed = (today - START_DATE).days // 7
 
+    if weeks_passed % 2 == 0:
+        week = "НЕЧЁТНАЯ НЕДЕЛЯ"
+    else:
+        week = "ЧЁТНАЯ НЕДЕЛЯ"
 
-for line in lines:
+    with open(
+        SCHEDULE_FILE,
+        "r",
+        encoding="utf-8"
+    ) as file:
 
-    line = line.strip()
+        lines = file.readlines()
 
-    # Нашли нужную неделю
-    if line == week:
-        show_week = True
-        continue
+    show_week = False
+    show_day = False
 
-    # Началась другая неделя
-    if show_week and line in [
-        "НЕЧЁТНАЯ НЕДЕЛЯ",
-        "ЧЁТНАЯ НЕДЕЛЯ"
-    ]:
-        break
+    schedule = []
 
-    # Нашли сегодняшний день
-    if show_week and line == day:
-        show_day = True
-        continue
+    for line in lines:
 
-    # Получаем пары
-    if show_day:
+        line = line.strip()
 
-        if line == "":
+        # Нашли нужную неделю
+        if line == week:
+            show_week = True
+            continue
+
+        # Началась другая неделя
+        if show_week and line in [
+            "НЕЧЁТНАЯ НЕДЕЛЯ",
+            "ЧЁТНАЯ НЕДЕЛЯ"
+        ]:
             break
 
-        # Формат:
-        # 6;Инклюзивная компетентность
-        number, subject = line.split(";", 1)
+        # Нашли сегодняшний день
+        if show_week and line == day:
+            show_day = True
+            continue
 
-        schedule.append({
-            "number": int(number),
-            "subject": subject
-        })
+        if show_day:
 
+            if line == "":
+                break
 
-# ==========================================
-# ИЩЕМ ТЕКУЩУЮ И СЛЕДУЮЩУЮ ПАРУ
-# ==========================================
+            number, subject = line.split(";", 1)
 
-current_pair = None
-next_pair = None
+            schedule.append({
+                "number": int(number),
+                "subject": subject
+            })
 
-for lesson in schedule:
-
-    pair_number = lesson["number"]
-
-    if pair_number not in pair_times:
-        continue
-
-    start, end = pair_times[pair_number]
-
-    # Сейчас идёт эта пара
-    if start <= current_time <= end:
-        current_pair = lesson
-
-    # Это ближайшая будущая пара
-    elif current_time < start and next_pair is None:
-        next_pair = lesson
+    return today, day, week, schedule
 
 
 # ==========================================
-# СОЗДАЁМ ОКНО
+# ОКНО
 # ==========================================
 
 root = tk.Tk()
 
-root.title("Моё расписание")
+root.title("TERMINAL // SCHEDULE")
 
-root.geometry("1100x750")
+root.configure(
+    bg=BG
+)
 
-root.minsize(900, 600)
+
+# ==========================================
+# ШРИФТЫ
+# ==========================================
+
+title_font = font.Font(
+    family="Courier New",
+    size=20,
+    weight="bold"
+)
+
+info_font = font.Font(
+    family="Courier New",
+    size=11
+)
+
+pair_font = font.Font(
+    family="Courier New",
+    size=10
+)
+
+pair_number_font = font.Font(
+    family="Courier New",
+    size=12,
+    weight="bold"
+)
 
 
 # ==========================================
@@ -179,160 +178,197 @@ root.minsize(900, 600)
 
 title = tk.Label(
     root,
-    text="МОЁ РАСПИСАНИЕ",
-    font=("Arial", 24, "bold")
+    text="[ SYSTEM // SCHEDULE ]",
+    bg=BG,
+    fg=GREEN,
+    font=title_font
 )
 
-title.pack(pady=10)
+title.pack(
+    pady=(15, 10)
+)
+
+
+# Линия
+line = tk.Label(
+    root,
+    text="=" * 100,
+    bg=BG,
+    fg=DARK_GREEN,
+    font=("Courier New", 9)
+)
+
+line.pack()
 
 
 # ==========================================
-# ОСНОВНОЙ КОНТЕЙНЕР
+# ОСНОВНАЯ ОБЛАСТЬ
 # ==========================================
 
-main_frame = tk.Frame(root)
+main_frame = tk.Frame(
+    root,
+    bg=BG
+)
 
 main_frame.pack(
     fill="both",
     expand=True,
     padx=15,
-    pady=10
+    pady=15
 )
 
 
 # ==========================================
-# ЛЕВАЯ ЧАСТЬ — ASCII
+# ASCII СЛЕВА
 # ==========================================
 
 left_frame = tk.Frame(
     main_frame,
-    width=450
+    bg=BG,
+    padx=20
 )
 
 left_frame.pack(
     side="left",
-    fill="both",
-    expand=False,
-    padx=10
+    anchor="n"
 )
+
 
 ascii_label = tk.Label(
     left_frame,
     text=ascii_girl,
+    bg=BG,
+    fg=GREEN,
     font=("Courier New", 10),
     justify="left",
     anchor="n"
 )
 
-ascii_label.pack(
-    fill="both",
-    expand=True
-)
+ascii_label.pack()
 
 
 # ==========================================
 # ПРАВАЯ ЧАСТЬ
 # ==========================================
 
-right_frame = tk.Frame(main_frame)
+right_frame = tk.Frame(
+    main_frame,
+    bg=BG,
+    padx=20
+)
 
 right_frame.pack(
-    side="right",
+    side="left",
     fill="both",
     expand=True,
-    padx= 150
+    anchor="n"
 )
 
 
 # ==========================================
-# ИНФОРМАЦИЯ О СЕГОДНЯ
+# ИНФОРМАЦИЯ
 # ==========================================
 
 date_label = tk.Label(
     right_frame,
-    text=f"Сегодня: {today.strftime('%d.%m.%Y')}",
-    font=("Arial", 14)
+    bg=BG,
+    fg=GREEN,
+    font=info_font,
+    anchor="w"
 )
 
-date_label.pack(anchor="w")
+date_label.pack(
+    anchor="w"
+)
 
 
 time_label = tk.Label(
     right_frame,
-    text=f"Сейчас: {current_time.strftime('%H:%M:%S')}",
-    font=("Arial", 14)
+    bg=BG,
+    fg=BRIGHT_GREEN,
+    font=("Courier New", 14, "bold"),
+    anchor="w"
 )
 
-time_label.pack(anchor="w")
+time_label.pack(
+    anchor="w"
+)
 
 
 day_label = tk.Label(
     right_frame,
-    text=f"День: {day}",
-    font=("Arial", 14)
+    bg=BG,
+    fg=GREEN,
+    font=info_font,
+    anchor="w"
 )
 
-day_label.pack(anchor="w")
+day_label.pack(
+    anchor="w"
+)
 
 
 week_label = tk.Label(
     right_frame,
-    text=f"Неделя: {week}",
-    font=("Arial", 14, "bold")
+    bg=BG,
+    fg=GREEN,
+    font=info_font,
+    anchor="w"
 )
 
-week_label.pack(anchor="w", pady=(0, 10))
+week_label.pack(
+    anchor="w",
+    pady=(0, 10)
+)
 
 
 # ==========================================
 # ТЕКУЩАЯ / СЛЕДУЮЩАЯ ПАРА
 # ==========================================
 
-if current_pair is not None:
-
-    number = current_pair["number"]
-
-    start, end = pair_times[number]
-
-    current_text = (
-        f"СЕЙЧАС ИДЁТ {number}-Я ПАРА\n\n"
-        f"{start.strftime('%H:%M')} - "
-        f"{end.strftime('%H:%M')}\n\n"
-        f"{current_pair['subject']}"
-    )
-
-elif next_pair is not None:
-
-    number = next_pair["number"]
-
-    start, end = pair_times[number]
-
-    current_text = (
-        f"СЛЕДУЮЩАЯ ПАРА — {number}-Я\n\n"
-        f"{start.strftime('%H:%M')} - "
-        f"{end.strftime('%H:%M')}\n\n"
-        f"{next_pair['subject']}"
-    )
-
-else:
-
-    current_text = "ПАР НА СЕГОДНЯ БОЛЬШЕ НЕТ"
-
-
-current_label = tk.Label(
+current_frame = tk.Frame(
     right_frame,
-    text=current_text,
-    font=("Arial", 14, "bold"),
-    justify="left",
-    anchor="w",
-    relief="groove",
+    bg=BG,
+    highlightbackground=GREEN,
+    highlightcolor=GREEN,
+    highlightthickness=1,
     padx=15,
-    pady=15
+    pady=12
 )
 
-current_label.pack(
+current_frame.pack(
     fill="x",
-    pady=10
+    pady=(0, 15)
+)
+
+
+current_title = tk.Label(
+    current_frame,
+    bg=BG,
+    fg=BRIGHT_GREEN,
+    font=("Courier New", 13, "bold"),
+    anchor="w",
+    justify="left"
+)
+
+current_title.pack(
+    anchor="w"
+)
+
+
+current_info = tk.Label(
+    current_frame,
+    bg=BG,
+    fg=GREEN,
+    font=info_font,
+    anchor="w",
+    justify="left",
+    wraplength=650
+)
+
+current_info.pack(
+    anchor="w",
+    pady=(5, 0)
 )
 
 
@@ -342,13 +378,16 @@ current_label.pack(
 
 schedule_title = tk.Label(
     right_frame,
-    text="РАСПИСАНИЕ НА СЕГОДНЯ",
-    font=("Arial", 16, "bold")
+    text="[ TODAY'S SCHEDULE ]",
+    bg=BG,
+    fg=BRIGHT_GREEN,
+    font=("Courier New", 13, "bold"),
+    anchor="w"
 )
 
 schedule_title.pack(
     anchor="w",
-    pady=5
+    pady=(0, 8)
 )
 
 
@@ -356,7 +395,10 @@ schedule_title.pack(
 # СПИСОК ПАР
 # ==========================================
 
-schedule_frame = tk.Frame(right_frame)
+schedule_frame = tk.Frame(
+    right_frame,
+    bg=BG
+)
 
 schedule_frame.pack(
     fill="both",
@@ -364,51 +406,136 @@ schedule_frame.pack(
 )
 
 
-scrollbar = tk.Scrollbar(
-    schedule_frame
-)
-
-scrollbar.pack(
-    side="right",
-    fill="y"
-)
-
-
-schedule_text = tk.Text(
-    schedule_frame,
-    font=("Arial", 11),
-    yscrollcommand=scrollbar.set,
-    wrap="word"
-)
-
-schedule_text.pack(
-    side="left",
-    fill="both",
-    expand=True
-)
-
-scrollbar.config(
-    command=schedule_text.yview
-)
-
-
 # ==========================================
-# ВЫВОДИМ ВСЕ ПАРЫ
+# ОБНОВЛЕНИЕ
 # ==========================================
 
-if len(schedule) == 0:
+def update_schedule():
 
-    schedule_text.insert(
-        "end",
-        "Сегодня пар нет."
+    today, day, week, schedule = get_schedule()
+
+    now = datetime.datetime.now()
+
+    current_time = now.time()
+
+
+    # --------------------------------------
+    # Информация
+    # --------------------------------------
+
+    date_label.config(
+        text=f"[ DATE ]     {today.strftime('%d.%m.%Y')}"
     )
 
-else:
+    time_label.config(
+        text=f"[ TIME ]     {now.strftime('%H:%M:%S')}"
+    )
+
+    day_label.config(
+        text=f"[ DAY ]      {day}"
+    )
+
+    week_label.config(
+        text=f"[ WEEK ]     {week}"
+    )
+
+
+    # --------------------------------------
+    # Текущая / следующая пара
+    # --------------------------------------
+
+    current_pair = None
+    next_pair = None
 
     for lesson in schedule:
 
         number = lesson["number"]
+
+        if number not in pair_times:
+            continue
+
+        start, end = pair_times[number]
+
+
+        if start <= current_time <= end:
+
+            current_pair = lesson
+
+        elif current_time < start:
+
+            if next_pair is None:
+                next_pair = lesson
+
+
+    # --------------------------------------
+    # Информация о паре
+    # --------------------------------------
+
+    if current_pair is not None:
+
+        number = current_pair["number"]
+
+        start, end = pair_times[number]
+
+        current_title.config(
+            text=f">>> CURRENT CLASS // #{number}"
+        )
+
+        current_info.config(
+            text=(
+                f"{start.strftime('%H:%M')} - "
+                f"{end.strftime('%H:%M')}\n"
+                f"{current_pair['subject']}"
+            )
+        )
+
+    elif next_pair is not None:
+
+        number = next_pair["number"]
+
+        start, end = pair_times[number]
+
+        current_title.config(
+            text=f">>> NEXT CLASS // #{number}"
+        )
+
+        current_info.config(
+            text=(
+                f"{start.strftime('%H:%M')} - "
+                f"{end.strftime('%H:%M')}\n"
+                f"{next_pair['subject']}"
+            )
+        )
+
+    else:
+
+        current_title.config(
+            text=">>> NO MORE CLASSES"
+        )
+
+        current_info.config(
+            text="Schedule completed for today."
+        )
+
+
+    # --------------------------------------
+    # Удаляем старые карточки
+    # --------------------------------------
+
+    for widget in schedule_frame.winfo_children():
+        widget.destroy()
+
+
+    # --------------------------------------
+    # Создаём карточки
+    # --------------------------------------
+
+    for lesson in schedule:
+
+        number = lesson["number"]
+
         subject = lesson["subject"]
+
 
         if number in pair_times:
 
@@ -419,52 +546,132 @@ else:
                 f"{end.strftime('%H:%M')}"
             )
 
-            schedule_text.insert(
-                "end",
-                f"{number}.  [{time_text}]\n"
-            )
-
-            schedule_text.insert(
-                "end",
-                f"    {subject}\n\n"
-            )
-
         else:
 
-            schedule_text.insert(
-                "end",
-                f"{number}. {subject}\n\n"
-            )
+            time_text = "??:?? - ??:??"
 
 
-schedule_text.config(
-    state="disabled"
-)
+        # Карточка
+        card = tk.Frame(
+            schedule_frame,
+            bg=BG,
+            highlightbackground=DARK_GREEN,
+            highlightcolor=DARK_GREEN,
+            highlightthickness=1,
+            padx=8,
+            pady=7
+        )
+
+        card.pack(
+            fill="x",
+            pady=3
+        )
 
 
-# ==========================================
-# ОБНОВЛЕНИЕ ВРЕМЕНИ
-# ==========================================
+        # Номер
+        number_label = tk.Label(
+            card,
+            text=f"[{number}]",
+            bg=BG,
+            fg=BRIGHT_GREEN,
+            font=pair_number_font,
+            width=5,
+            anchor="w"
+        )
 
-def update_clock():
+        number_label.pack(
+            side="left",
+            anchor="n"
+        )
 
-    current = datetime.datetime.now()
 
-    time_label.config(
-        text=f"Сейчас: {current.strftime('%H:%M:%S')}"
+        # Время
+        time_label_card = tk.Label(
+            card,
+            text=time_text,
+            bg=BG,
+            fg=GREEN,
+            font=pair_font,
+            width=15,
+            anchor="w"
+        )
+
+        time_label_card.pack(
+            side="left",
+            anchor="n"
+        )
+
+
+        # Предмет
+        subject_label = tk.Label(
+            card,
+            text=subject,
+            bg=BG,
+            fg=GREEN,
+            font=pair_font,
+            justify="left",
+            anchor="w",
+            wraplength=650
+        )
+
+        subject_label.pack(
+            side="left",
+            fill="x",
+            expand=True,
+            padx=10
+        )
+
+
+        # ----------------------------------
+        # Текущая пара
+        # ----------------------------------
+
+        if current_pair is not None:
+
+            if number == current_pair["number"]:
+
+                card.config(
+                    highlightbackground=BRIGHT_GREEN,
+                    highlightcolor=BRIGHT_GREEN,
+                    highlightthickness=2
+                )
+
+                number_label.config(
+                    fg=BRIGHT_GREEN
+                )
+
+
+    # --------------------------------------
+    # Автоматический размер окна
+    # --------------------------------------
+
+    root.update_idletasks()
+
+    width = root.winfo_reqwidth()
+    height = root.winfo_reqheight()
+
+    width = max(width, 900)
+    height = max(height, 550)
+
+    root.geometry(
+        f"{width}x{height}"
     )
+
+
+    # --------------------------------------
+    # Повтор через 1 секунду
+    # --------------------------------------
 
     root.after(
         1000,
-        update_clock
+        update_schedule
     )
-
-
-update_clock()
 
 
 # ==========================================
 # ЗАПУСК
 # ==========================================
+
+update_schedule()
 
 root.mainloop()
